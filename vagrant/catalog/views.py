@@ -103,7 +103,7 @@ def fbconnect():
     output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
 
     flash("Now logged in as %s" % login_session['username'])
-    return redirect(url_for(showAllProducts))
+    return redirect(url_for('showAllProducts'))
 
 @app.route('/fbdisconnect')
 def fbdisconnect():
@@ -283,9 +283,9 @@ def showAllProducts():
     items = session.query(Item).all()
     ##return jsonify(products = [p.serialize for p in products])
     if 'username' not in login_session:
-        return render_template('publiccategories.html', products = products, items = items)
+        return render_template('publicall.html', products = products, items = items)
     else:
-        return render_template('categories.html', products = products, items = items)
+        return render_template('all.html', products = products, items = items)
 
 #ADD new category
 @app.route('/catalog/new_category', methods=['GET','POST'])
@@ -307,29 +307,54 @@ def addCategory():
 def addItem():
     if 'username' not in login_session:
         return redirect('/login')
-    category = session.query(Product).filter_by()
     if request.method == 'POST':
-        new_item = Item(name=request.form['name'])
-        session.add(new_category)
+        new_item = Item(name=request.form['name'], description=request.form['description'], category_id=request.form['category_id'])
+        session.add(new_item)
         session.commit()
-        flash('New Category %s Successfully Created' % new_category.name)
+        flash('New Item %s Successfully Created' % new_item.name)
         return redirect(url_for('showAllProducts'))
     else:
-        return render_template('newItem.html')
+        products = session.query(Product).all()
+        return render_template('newItem.html', products=products)
 
 #EDIT category
-@app.route('/catalog/<category>/edit')
+@app.route('/catalog/<category>/edit', methods=['GET','POST'])
 def editCategory(category):
-    return redirect(url_for(showAllProducts))
+    if 'username' not in login_session:
+        return redirect('/login')
+    if request.method == 'POST':
+        c = session.query(Product).filter_by(name=category).first()
+        if request.form['submit']=='save' and request.form['name']:
+            c.name = request.form['name']
+            session.commit()
+            return redirect(url_for('showCategory', category=c.name))
+        else:
+            return redirect(url_for('showCategory', category=category))
+    else:
+        return render_template('editCategory.html', category_name=category)
 
 
 
 #DELETE category
-@app.route('/catalog/<category>/delete')
-def deleteCategory():
-    return redirect(url_for(showAllProducts))
-
-
+@app.route('/catalog/<category>/delete', methods=['GET','POST'])
+def deleteCategory(category):
+    if 'username' not in login_session:
+        return redirect('/login')
+    if request.method == 'POST':
+        if request.form['submit']=='save':
+            toDelCat = session.query(Product).filter_by(name=category).first()
+            toDelItems = session.query(Item).filter_by(category_id=toDelCat.id).all()
+            if toDelCat:
+                session.delete(toDelCat)
+            if toDelItems:
+                session.delete(toDelItems)
+            flash('%s and belonged items Successfully Deleted' % category)
+            session.commit()
+            return redirect(url_for('showAllProducts'))
+        else:
+            return redirect(url_for('showCategory', category=category))
+    else:
+        return render_template('deleteCategory.html', category_name=category)
 
 
 
@@ -337,59 +362,68 @@ def deleteCategory():
 def showItem(category, item):
     ##c = session.query(Product).filter_by(name = category).first()
     i = session.query(Item).filter_by(name = item).first()
-    if i.category!=category:
+    if i.category.name!=category:
         flash('No such item under category')
         return redirect(url_for('showAllProducts'))
     else:
         if 'username' not in login_session:
-            return render_template('publicitem.html', item = i)
+            return render_template('publicitem.html', item=i)
         else:
-            return render_template('item.html', item = i)
+            return render_template('item.html', category_name=category, item=i)
 
 
+#SHOW category's items
 @app.route('/catalog/<category>/items')
 def showCategory(category):
-    items = session.query(Item).filter_by(category = category).all()
+    c = session.query(Product).filter_by(name=category).first()
+    items = session.query(Item).filter_by(category_id=c.id).all()
     if 'username' not in login_session:
-        return render_template('publiccategoryproducts.html', items = items)
+        return render_template('publiccategory.html', category_name=category, items=items)
     else:
-        return render_template('showcategoryproducts.html', items = items)
+        return render_template('category.html', category_name=category, items=items)
+
 
 @app.route('/catalog/<category>/<item>/edit', methods=['GET','POST'])
 #@auth.login_required
 def editItem(category, item):
     if 'username' not in login_session:
         return redirect('/login')
-    i = session.query(Item).filter_by(name = item).first()
-    if i == None or i.category != category: return redirect(url_for('showAllProducts'))
+    toEditItem = session.query(Item).filter_by(name = item).first()
+    products = session.query(Product).all()
+    if toEditItem == None or toEditItem.category.name != category:
+        flash('This item is not under the category you select')
+        return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
-        if request.form['name']:
-            i.name = request.form['name']
-        if request.form['description']:
-            i.description = request.form['description']
-        if request.form['category']:
-            c = session.query(Product).filter_by(name = request.form['category']).first()
-            if c != None:
-                i.category = c.name
-                i.category_id = c.id
-        session.commit()
-        return redirect(url_for('showItem', category = category, item = item))
+        if request.form['submit']=='save':
+            if request.form['name']:
+                toEditItem.name = request.form['name']
+            if request.form['description']:
+                toEditItem.description = request.form['description']
+            if request.form['category_id']:
+                c = session.query(Product).filter_by(id=request.form['category_id']).first()
+                if c != None:
+                    toEditItem.category_id = c.id
+            session.commit()
+            return redirect(url_for('showItem', category = toEditItem.category.name, item = toEditItem.name))
+        else:
+            return redirect(url_for('showItem', category=category, item=item))
     else:
-        return render_template('editItem.html', item_id = i.id)
+        return render_template('editItem.html', item=toEditItem, products=products)
 
 @app.route('/catalog/<category>/<item>/delete', methods=['GET','POST'])
 #@auth.login_required
 def deleteItem(category, item):
     if 'username' not in login_session:
         return redirect('/login')
-    i = session.query(Item).filter_by(name = item).first()
-    if i == None or i.category != category: return redirect(url_for('showAllProducts'))
+    toDelItem = session.query(Item).filter_by(name = item).first()
+    if toDelItem == None or toDelItem.category.name != category: return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
-        session.delete(i)
-        session.commit()
-        return redirect(url_for('showCategory', category = i.category.name))
+        if request.form['submit']=='save':
+            session.delete(toDelItem)
+            session.commit()
+        return redirect(url_for('showCategory', category=category))
     else:
-        return render_template('deleteItem.html', item_id = i.id)
+        return render_template('deleteItem.html', item_name=item)
 
 
 if __name__ == '__main__':

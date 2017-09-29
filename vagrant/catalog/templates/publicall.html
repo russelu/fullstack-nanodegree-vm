@@ -6,16 +6,14 @@
 			<a href="{{url_for('showLogin')}}"> Log in </a>
 		</div>
 	</div>
-	<div class="row divider blue">
+	<div class="row divider green">
 		<div class="col-md-12"></div>
 	</div>
-	<div class="row banner main">
-		<div class="col-md-1"></div>
-		<div class="col-md-11 padding-none">
+	<div class="row banner menu">
+		<div class="col-md-11 col-md-offset-1 padding-none">
 			<h1>Catalog App</h1>
 		</div>
 	</div>
-
 	<div class = 'flash'>
 		      {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -39,6 +37,14 @@
 		</div>
 		<div class="col-md-1"></div>
 	</div>
+	<div class="row padding-top padding-bottom">
+		<div class="col-md-1"></div>
+		<div class="col-md-10 padding-none">
+			<h1>Categories
+			</h1>
+		</div>
+		<div class="col-md-1"></div>
+	</div>
 	{% for product in products %}
 		<a href = "{{url_for('showCategory', category = product.name)}}">
 			<div class="row">
@@ -57,15 +63,24 @@
 		</div>
 		<div class="col-md-1"></div>
 	</div>
+		<div class="row padding-top padding-bottom">
+		<div class="col-md-1"></div>
+		<div class="col-md-10 padding-none">
+			<h1>Latest Items
+			</h1>
+		</div>
+		<div class="col-md-1"></div>
+	</div>
 	{% for item in items %}
 		<a href = "{{url_for('showItem', category = item.category.name, item = item.name)}}">
 			<div class="row">
 				<div class="col-md-1"></div>
 					<div class="col-md-10 restaurant-list">
 						<h3>{{item.name}}</h3>
+						<p>({{item.category.name}})</p>
 					</div>
 				<div class="col-md-1"></div>
 			</div>
-		</a>({{item.category.name}})
+		</a>
 	{% endfor %}
 {% endblock %}
