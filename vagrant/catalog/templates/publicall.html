@@ -1,19 +1,19 @@
 {% extends "main.html" %}
 {% block content %}
-	<div class="row top-menu">
+	<div class="row">
 		<div class="col-md-10"></div>
 		<div class="col-md-2 text-right">
 			<a href="{{url_for('showLogin')}}"> Log in </a>
 		</div>
 	</div>
-	<div class="row divider green">
+	<div class="row">
 		<div class="col-md-12"></div>
 	</div>
-	<div class="row banner menu">
+	<nav class="navbar navbar-light bg-primary">
 		<div class="col-md-11 col-md-offset-1 padding-none">
 			<h1>Catalog App</h1>
 		</div>
-	</div>
+	</nav>
 	<div class = 'flash'>
 		      {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -40,21 +40,23 @@
 	<div class="row padding-top padding-bottom">
 		<div class="col-md-1"></div>
 		<div class="col-md-10 padding-none">
-			<h1>Categories
-			</h1>
+			<h2>Categories
+			</h2>
 		</div>
 		<div class="col-md-1"></div>
 	</div>
 	{% for product in products %}
+	<div class="container">
 		<a href = "{{url_for('showCategory', category = product.name)}}">
 			<div class="row">
 				<div class="col-md-1"></div>
-					<div class="col-md-10 restaurant-list">
-						<h3>{{product.name}}</h3>
+					<div class="col-md-10">
+						<h4>{{product.name}}</h4>
 					</div>
 				<div class="col-md-1"></div>
 			</div>
 		</a>
+	</div>
 	{% endfor %}
 	<div class="row padding-top padding-bottom">
 		<div class="col-md-1"></div>
@@ -66,21 +68,23 @@
 		<div class="row padding-top padding-bottom">
 		<div class="col-md-1"></div>
 		<div class="col-md-10 padding-none">
-			<h1>Latest Items
-			</h1>
+			<h3>Latest Items
+			</h3>
 		</div>
 		<div class="col-md-1"></div>
 	</div>
 	{% for item in items %}
+	<div class="container">
 		<a href = "{{url_for('showItem', category = item.category.name, item = item.name)}}">
 			<div class="row">
 				<div class="col-md-1"></div>
-					<div class="col-md-10 restaurant-list">
-						<h3>{{item.name}}</h3>
+					<div class="col-md-10 ">
+						<h4>{{item.name}}</h4>
 						<p>({{item.category.name}})</p>
 					</div>
 				<div class="col-md-1"></div>
 			</div>
 		</a>
+	</div>
 	{% endfor %}
 {% endblock %}

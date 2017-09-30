@@ -1,14 +1,14 @@
 {% extends "main.html" %}
 {% block content %}
 {% include "header.html" %}
-	<div class="row divider green">
+	<div class="row">
 		<div class="col-md-12"></div>
 	</div>
-	<div class="row banner menu">
+	<nav class="navbar navbar-light bg-primary">
 		<div class="col-md-11 col-md-offset-1 padding-none">
 			<h1>Catalog App</h1>
 		</div>
-	</div>
+	</nav>
 	
 
 	<div class = 'flash'>
@@ -46,7 +46,7 @@
 		<a href = "{{url_for('showItem', category = item.category.name, item = item.name)}}">
 			<div class="row">
 				<div class="col-md-1"></div>
-					<div class="col-md-10 restaurant-list">
+					<div class="col-md-10">
 						<h3>{{item.name}}</h3>
 
 					</div>
