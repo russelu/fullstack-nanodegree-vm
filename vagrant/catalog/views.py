@@ -431,6 +431,22 @@ def catalogJSON():
     items = session.query(Item).all()
     return jsonify(Category=[c.serialize for c in categories], Item=[i.serialize for i in items])
 
+@app.route('/catalog/<category>.json')
+def categoryJSON(category):
+    c = session.query(Product).filter_by(name=category).first()
+    if c==None:
+        flash('This category is not valid')
+        return redirect(url_for('showAllProducts'))
+    return jsonify(c.serialize)
+
+@app.route('/catalog/<category>/<item>.json')
+def itemJSON(category,item):
+    c = session.query(Product).filter_by(name=category).first()
+    i = session.query(Item).filter_by(name=item).first()
+    if i==None or i.category_id!=c.id:
+        flash('This item is not valid or under the category you select')
+        return redirect(url_for('showAllProducts'))
+    return jsonify(i.serialize)
 
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
