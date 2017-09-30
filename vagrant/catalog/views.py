@@ -1,5 +1,6 @@
 from models import Base, User, Product, Item
-from flask import Flask, jsonify, request, render_template, url_for, redirect, abort, flash
+from flask import Flask, jsonify, request, render_template
+from flask import url_for, redirect, abort, flash
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine, asc
@@ -48,7 +49,8 @@ def fbconnect():
         'web']['app_id']
     app_secret = json.loads(
         open('fb_client_secrets.json', 'r').read())['web']['app_secret']
-    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
+    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token\
+    &client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
         app_id, app_secret, access_token)
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
@@ -56,13 +58,6 @@ def fbconnect():
 
     # Use token to get user info from API
     userinfo_url = "https://graph.facebook.com/v2.8/me"
-    '''
-        Due to the formatting for the result from the server token exchange we have to
-        split the token first on commas and select the first index which gives us the key : value
-        for the server access token then we split it on colons to pull out the actual token value
-        and replace the remaining quotes with nothing so that it can be used directly in the graph
-        api calls
-    '''
     token = result.split(',')[0].split(':')[1].replace('"', '')
 
     url = 'https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % token
@@ -80,7 +75,8 @@ def fbconnect():
     login_session['access_token'] = token
 
     # Get user picture
-    url = 'https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0&height=200&width=200' % token
+    url = 'https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0\
+    &height=200&width=200' % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
     data = json.loads(result)
@@ -100,17 +96,20 @@ def fbconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;\
+    -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
 
     flash("Now logged in as %s" % login_session['username'])
     return redirect(url_for('showAllProducts'))
 
+#disconnect Facebook login
 @app.route('/fbdisconnect')
 def fbdisconnect():
     facebook_id = login_session['facebook_id']
     # The access token must me included to successfully logout
     access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % \
+    (facebook_id,access_token)
     h = httplib2.Http()
     result = h.request(url, 'DELETE')[1]
     flash("you have been logged out")
@@ -203,7 +202,8 @@ def gconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;\
+    -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     return output
 
@@ -216,11 +216,9 @@ def createUser(login_session):
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user.id
 
-
 def getUserInfo(user_id):
     user = session.query(User).filter_by(id=user_id).one()
     return user
-
 
 def getUserID(email):
     try:
@@ -274,23 +272,24 @@ def disconnect():
         flash("You were not logged in")
         return redirect(url_for('showAllProducts'))
 
-## New code starting here
+##backend database operations start from here
 @app.route('/')
 @app.route('/catalog')
-#@auth.login_required
 def showAllProducts():
     products = session.query(Product).all()
     items = session.query(Item).all()
-    ##return jsonify(products = [p.serialize for p in products])
     if 'username' not in login_session:
+        #if not logged in, render public page
         return render_template('publicall.html', products = products, items = items)
     else:
+        #if logged in, render page user can edit, add and delete
         return render_template('all.html', products = products, items = items)
 
 #ADD new category
 @app.route('/catalog/new_category', methods=['GET','POST'])
 def addCategory():
     if 'username' not in login_session:
+        #login required
         return redirect('/login')
     if request.method == 'POST':
         new_category = Product(name=request.form['name'])
@@ -299,6 +298,7 @@ def addCategory():
         flash('New Category %s Successfully Created' % new_category.name)
         return redirect(url_for('showAllProducts'))
     else:
+        #method=='GET'
         return render_template('newCategory.html')
 
 
@@ -308,12 +308,15 @@ def addItem():
     if 'username' not in login_session:
         return redirect('/login')
     if request.method == 'POST':
-        new_item = Item(name=request.form['name'], description=request.form['description'], category_id=request.form['category_id'])
+        new_item = Item(name=request.form['name'], description=request.form['description'],\
+            category_id=request.form['category_id'])
         session.add(new_item)
         session.commit()
         flash('New Item %s Successfully Created' % new_item.name)
         return redirect(url_for('showAllProducts'))
     else:
+        #method=='GET', render template with current categories info
+        #user has to choose an existing category to push this new item
         products = session.query(Product).all()
         return render_template('newItem.html', products=products)
 
@@ -321,54 +324,63 @@ def addItem():
 @app.route('/catalog/<category>/edit', methods=['GET','POST'])
 def editCategory(category):
     if 'username' not in login_session:
+        #login required
         return redirect('/login')
     if request.method == 'POST':
         c = session.query(Product).filter_by(name=category).first()
         if request.form['submit']=='save' and request.form['name']:
+            #if user actually sends request to update this cat
             c.name = request.form['name']
             session.commit()
             return redirect(url_for('showCategory', category=c.name))
         else:
+            #if user cancels, redirect to previous page
             return redirect(url_for('showCategory', category=category))
     else:
+        #method=='GET'
         return render_template('editCategory.html', category_name=category)
-
 
 
 #DELETE category
 @app.route('/catalog/<category>/delete', methods=['GET','POST'])
 def deleteCategory(category):
     if 'username' not in login_session:
+        #login required
         return redirect('/login')
     if request.method == 'POST':
         if request.form['submit']=='save':
+            #if user actually sends request to delete cat
             toDelCat = session.query(Product).filter_by(name=category).first()
             toDelItems = session.query(Item).filter_by(category_id=toDelCat.id).all()
             if toDelCat:
                 session.delete(toDelCat)
             if toDelItems:
+                #also need to delete belonged items
                 session.delete(toDelItems)
             flash('%s and belonged items Successfully Deleted' % category)
             session.commit()
             return redirect(url_for('showAllProducts'))
         else:
+            #if user cancels, redirect
             return redirect(url_for('showCategory', category=category))
     else:
+        #method=='GET'
         return render_template('deleteCategory.html', category_name=category)
 
 
 
 @app.route('/catelog/<category>/<item>')
 def showItem(category, item):
-    ##c = session.query(Product).filter_by(name = category).first()
     i = session.query(Item).filter_by(name = item).first()
     if i.category.name!=category:
         flash('No such item under category')
         return redirect(url_for('showAllProducts'))
     else:
         if 'username' not in login_session:
+            #if not logged in, render public page
             return render_template('publicitem.html', item=i)
         else:
+            #if logged in, user can update or delete item
             return render_template('item.html', category_name=category, item=i)
 
 
@@ -378,8 +390,10 @@ def showCategory(category):
     c = session.query(Product).filter_by(name=category).first()
     items = session.query(Item).filter_by(category_id=c.id).all()
     if 'username' not in login_session:
+        #if not log in, user can only see category's items
         return render_template('publiccategory.html', category_name=category, items=items)
     else:
+        #if login, user can edit category, add items, delete category
         return render_template('category.html', category_name=category, items=items)
 
 
@@ -387,6 +401,7 @@ def showCategory(category):
 #@auth.login_required
 def editItem(category, item):
     if 'username' not in login_session:
+        #login required
         return redirect('/login')
     toEditItem = session.query(Item).filter_by(name = item).first()
     products = session.query(Product).all()
@@ -395,33 +410,45 @@ def editItem(category, item):
         return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
         if request.form['submit']=='save':
+            #if user actually sends request to update
             if request.form['name']:
+                #update name
                 toEditItem.name = request.form['name']
             if request.form['description']:
+                #update description
                 toEditItem.description = request.form['description']
             if request.form['category_id']:
+                #if update belonged cat, need to redirect to new url with new cat name
                 c = session.query(Product).filter_by(id=request.form['category_id']).first()
                 if c != None:
                     toEditItem.category_id = c.id
             session.commit()
-            return redirect(url_for('showItem', category = toEditItem.category.name, item = toEditItem.name))
+            return redirect(url_for('showItem', category = toEditItem.category.name,\
+                item=toEditItem.name))
         else:
+            #if user cancels
             return redirect(url_for('showItem', category=category, item=item))
     else:
+        #method=='GET'
         return render_template('editItem.html', item=toEditItem, products=products)
 
+#DELETE AN ITEM
 @app.route('/catalog/<category>/<item>/delete', methods=['GET','POST'])
 def deleteItem(category, item):
     if 'username' not in login_session:
+        #login required
         return redirect('/login')
     toDelItem = session.query(Item).filter_by(name = item).first()
-    if toDelItem == None or toDelItem.category.name != category: return redirect(url_for('showAllProducts'))
+    #query
+    if toDelItem == None or toDelItem.category.name != category:
+        return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
         if request.form['submit']=='save':
             session.delete(toDelItem)
             session.commit()
         return redirect(url_for('showCategory', category=category))
     else:
+        #method=='GET'
         return render_template('deleteItem.html', item_name=item)
 
 #JSON Endpoint
