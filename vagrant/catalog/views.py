@@ -411,7 +411,6 @@ def editItem(category, item):
         return render_template('editItem.html', item=toEditItem, products=products)
 
 @app.route('/catalog/<category>/<item>/delete', methods=['GET','POST'])
-#@auth.login_required
 def deleteItem(category, item):
     if 'username' not in login_session:
         return redirect('/login')
@@ -424,6 +423,13 @@ def deleteItem(category, item):
         return redirect(url_for('showCategory', category=category))
     else:
         return render_template('deleteItem.html', item_name=item)
+
+#JSON Endpoint
+@app.route('/catalog.json')
+def catalogJSON():
+    categories = session.query(Product).all()
+    items = session.query(Item).all()
+    return jsonify(Category=[c.serialize for c in categories], Item=[i.serialize for i in items])
 
 
 if __name__ == '__main__':
