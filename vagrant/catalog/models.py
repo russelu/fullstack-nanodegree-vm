@@ -1,13 +1,19 @@
-from sqlalchemy import Column,Integer,String,ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy import create_engine
 from passlib.apps import custom_app_context as pwd_context
-import random, string
-from itsdangerous import(TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
+import random
+import string
+from string import ascii_uppercase as upcs
+from string import digits as dg
+from itsdangerous import\
+    (TimedJSONWebSignatureSerializer as Serializer,
+        BadSignature, SignatureExpired)
 
 Base = declarative_base()
-secret_key = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in xrange(32))
+secret_key = ''.join(random.choice(upcs + dg) for x in xrange(32))
+
 
 class User(Base):
     __tablename__ = 'user'
@@ -23,8 +29,9 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), nullable=False)
-    #items = relationship('Item', cascade='all, delete-orphan')
+    # items = relationship('Item', cascade='all, delete-orphan')
     user_id = Column(Integer, ForeignKey('user.id'))
+
     @property
     def serialize(self):
         """Return object data in easily serializeable format"""
@@ -33,6 +40,7 @@ class Product(Base):
             'name': self.name
             }
 
+
 class Item(Base):
     __tablename__ = 'item'
 
@@ -40,8 +48,10 @@ class Item(Base):
     name = Column(String(80), nullable=False)
     description = Column(String(250))
     category_id = Column(Integer, ForeignKey('product.id'))
-    category = relationship(Product, backref=backref("items", cascade="all,delete-orphan"))
+    category = relationship(Product, backref=backref(
+        "items", cascade="all,delete-orphan"))
     user_id = Column(Integer, ForeignKey('user.id'))
+
     @property
     def serialize(self):
         """Return object data in easily serializeable format"""
@@ -52,7 +62,6 @@ class Item(Base):
             }
 
 engine = create_engine('sqlite:///catalog.db')
- 
+
 
 Base.metadata.create_all(engine)
-    
