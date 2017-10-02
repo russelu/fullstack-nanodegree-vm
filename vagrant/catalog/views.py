@@ -292,6 +292,10 @@ def addCategory():
         if request.form['name'][-5:]=='.json':
             flash("please don't use '.json' as end of category's name.")
             return redirect(url_for('addCategory'))
+        for a in request.form['name']:
+            if a=='/':
+                flash("please don't use '/' in category's name.")
+                return redirect(url_for('addCategory'))
         new_category = Product(name=request.form['name'], user_id=user.id)
         session.add(new_category)
         session.commit()
@@ -313,6 +317,10 @@ def addItem():
         if request.form['name'][-5:]=='.json':
             flash("please don't use '.json' as end of item's name.")
             return redirect(url_for('addItem'))
+        for a in request.form['name']:
+            if a=='/':
+                flash("please don't use '/' in item's name.")
+                return redirect(url_for('addItem'))
         new_item = Item(name=request.form['name'], description=request.form['description'],user_id=user.id)
         category.items.append(new_item)
         session.commit()
@@ -338,6 +346,13 @@ def editCategory(category):
     if request.method == 'POST':
         if request.form['submit']=='save' and request.form['name']:
             #if user actually sends request to update this cat
+            if request.form['name'][-5:]=='.json':
+                flash("please don't use '.json' as end of category's name.")
+                return redirect(url_for('editCategory', category=category))
+            for a in request.form['name']:
+                if a=='/':
+                    flash("please don't use '/' in category's name.")
+                    return redirect(url_for('editCategory', category=category))
             c.name = request.form['name']
             session.commit()
             return redirect(url_for('showCategory', category=c.name))
@@ -428,6 +443,13 @@ def editItem(category, item):
         #if user actually sends request to update
             if request.form['name']:
             #update name
+                if request.form['name'][-5:]=='.json':
+                    flash("please don't use '.json' as end of item's name.")
+                    return redirect(url_for('editItem', category=category, item=item))
+                for a in request.form['name']:
+                    if a=='/':
+                        flash("please don't use '/' in item's name.")
+                        return redirect(url_for('editCategory', category=category, item=item))
                 toEditItem.name = request.form['name']
             if request.form['description']:
             #update description
