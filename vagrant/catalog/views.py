@@ -49,10 +49,10 @@ def fbconnect():
         'web']['app_id']
     app_secret = json.loads(
         open('fb_client_secrets.json', 'r').read())['web']['app_secret']
-    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token\
-    &client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
+    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
         app_id, app_secret, access_token)
     h = httplib2.Http()
+
     result = h.request(url, 'GET')[1]
 
 
@@ -75,8 +75,7 @@ def fbconnect():
     login_session['access_token'] = token
 
     # Get user picture
-    url = 'https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0\
-    &height=200&width=200' % token
+    url = 'https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0&height=200&width=200' % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
     data = json.loads(result)
@@ -96,8 +95,7 @@ def fbconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;\
-    -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
 
     flash("Now logged in as %s" % login_session['username'])
     return redirect(url_for('showAllProducts'))
@@ -108,8 +106,7 @@ def fbdisconnect():
     facebook_id = login_session['facebook_id']
     # The access token must me included to successfully logout
     access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % \
-    (facebook_id,access_token)
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
     h = httplib2.Http()
     result = h.request(url, 'DELETE')[1]
     flash("you have been logged out")
@@ -202,8 +199,7 @@ def gconnect():
     output += '!</h1>'
     output += '<img src="'
     output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;\
-    -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
     return output
 
@@ -292,7 +288,11 @@ def addCategory():
         #login required
         return redirect('/login')
     if request.method == 'POST':
-        new_category = Product(name=request.form['name'])
+        user = session.query(User).filter_by(name=login_session['username']).first()
+        if request.form['name'][-5:]=='.json':
+            flash("please don't use '.json' as end of category's name.")
+            return redirect(url_for('addCategory'))
+        new_category = Product(name=request.form['name'], user_id=user.id)
         session.add(new_category)
         session.commit()
         flash('New Category %s Successfully Created' % new_category.name)
@@ -308,9 +308,13 @@ def addItem():
     if 'username' not in login_session:
         return redirect('/login')
     if request.method == 'POST':
-        new_item = Item(name=request.form['name'], description=request.form['description'],\
-            category_id=request.form['category_id'])
-        session.add(new_item)
+        user = session.query(User).filter_by(name=login_session['username']).first()
+        category = session.query(Product).filter_by(id=request.form['category_id']).first()
+        if request.form['name'][-5:]=='.json':
+            flash("please don't use '.json' as end of item's name.")
+            return redirect(url_for('addItem'))
+        new_item = Item(name=request.form['name'], description=request.form['description'],user_id=user.id)
+        category.items.append(new_item)
         session.commit()
         flash('New Item %s Successfully Created' % new_item.name)
         return redirect(url_for('showAllProducts'))
@@ -326,8 +330,12 @@ def editCategory(category):
     if 'username' not in login_session:
         #login required
         return redirect('/login')
+    c = session.query(Product).filter_by(name=category).first()
+    user = session.query(User).filter_by(name=login_session['username']).first()
+    if user.id!=c.user_id:
+        flash('you are not allowed to edit category other user created')
+        return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
-        c = session.query(Product).filter_by(name=category).first()
         if request.form['submit']=='save' and request.form['name']:
             #if user actually sends request to update this cat
             c.name = request.form['name']
@@ -347,16 +355,16 @@ def deleteCategory(category):
     if 'username' not in login_session:
         #login required
         return redirect('/login')
+    toDelCat = session.query(Product).filter_by(name=category).first()
+    user = session.query(User).filter_by(name=login_session['username']).first()
+    if user.id!=toDelCat.user_id:
+        flash('you are not allowed to delete category other user created')
+        return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
         if request.form['submit']=='save':
-            #if user actually sends request to delete cat
-            toDelCat = session.query(Product).filter_by(name=category).first()
-            toDelItems = session.query(Item).filter_by(category_id=toDelCat.id).all()
+        #if user actually sends request to delete cat
             if toDelCat:
                 session.delete(toDelCat)
-            if toDelItems:
-                #also need to delete belonged items
-                session.delete(toDelItems)
             flash('%s and belonged items Successfully Deleted' % category)
             session.commit()
             return redirect(url_for('showAllProducts'))
@@ -372,7 +380,7 @@ def deleteCategory(category):
 @app.route('/catelog/<category>/<item>')
 def showItem(category, item):
     i = session.query(Item).filter_by(name = item).first()
-    if i.category.name!=category:
+    if i==None or i.category.name!=category:
         flash('No such item under category')
         return redirect(url_for('showAllProducts'))
     else:
@@ -405,26 +413,32 @@ def editItem(category, item):
         return redirect('/login')
     toEditItem = session.query(Item).filter_by(name = item).first()
     products = session.query(Product).all()
+    if products==None:
+        flash("you haven't created any category yet.")
+        return redirect(url_for('addCategory'))
     if toEditItem == None or toEditItem.category.name != category:
         flash('This item is not under the category you select')
         return redirect(url_for('showAllProducts'))
+    user = session.query(User).filter_by(name=login_session['username']).first()
+    if user.id!=toEditItem.user_id:
+        flash('you are not allowed to edit items other user created')
+        return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
         if request.form['submit']=='save':
-            #if user actually sends request to update
+        #if user actually sends request to update
             if request.form['name']:
-                #update name
+            #update name
                 toEditItem.name = request.form['name']
             if request.form['description']:
-                #update description
+            #update description
                 toEditItem.description = request.form['description']
-            if request.form['category_id']:
-                #if update belonged cat, need to redirect to new url with new cat name
+            if request.form['category_id'] and request.form['category_id']!=toEditItem.category.id:
+            #if update belonged cat, need to redirect to new url with new cat name
                 c = session.query(Product).filter_by(id=request.form['category_id']).first()
                 if c != None:
-                    toEditItem.category_id = c.id
+                    toEditItem.category = c
             session.commit()
-            return redirect(url_for('showItem', category = toEditItem.category.name,\
-                item=toEditItem.name))
+            return redirect(url_for('showItem', category = toEditItem.category.name,item=toEditItem.name))
         else:
             #if user cancels
             return redirect(url_for('showItem', category=category, item=item))
@@ -438,9 +452,17 @@ def deleteItem(category, item):
     if 'username' not in login_session:
         #login required
         return redirect('/login')
+    c = session.query(Product).filter_by(name=category).first()
+    if c==None:
+        flash("you haven't created this category yet.")
+        return redirect(url_for('addCategory'))
     toDelItem = session.query(Item).filter_by(name = item).first()
-    #query
     if toDelItem == None or toDelItem.category.name != category:
+        flash("item not valid, or not under this category")
+        return redirect(url_for('showAllProducts'))
+    user = session.query(User).filter_by(name=login_session['username']).first()
+    if user.id!=toDelItem.user_id:
+        flash('you are not allowed to delete item other user created')
         return redirect(url_for('showAllProducts'))
     if request.method == 'POST':
         if request.form['submit']=='save':
@@ -456,6 +478,11 @@ def deleteItem(category, item):
 def catalogJSON():
     categories = session.query(Product).all()
     items = session.query(Item).all()
+    if caterogories==None:
+        flash('Nothing available. you have created anything yet.')
+        return redirect(url_for('showAllProducts'))
+    elif items==None:
+        return jsonify(Category=[c.serialize for c in categories])
     return jsonify(Category=[c.serialize for c in categories], Item=[i.serialize for i in items])
 
 @app.route('/catalog/<category>.json')
@@ -469,9 +496,12 @@ def categoryJSON(category):
 @app.route('/catalog/<category>/<item>.json')
 def itemJSON(category,item):
     c = session.query(Product).filter_by(name=category).first()
+    if c==None:
+        flash('This category is not valid')
+        return redirect(url_for('showAllProducts'))
     i = session.query(Item).filter_by(name=item).first()
-    if i==None or i.category_id!=c.id:
-        flash('This item is not valid or under the category you select')
+    if i==None or i.category.id!=c.id:
+        flash('This item is not valid or not under the category you select')
         return redirect(url_for('showAllProducts'))
     return jsonify(i.serialize)
 

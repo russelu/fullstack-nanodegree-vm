@@ -1,6 +1,6 @@
 from sqlalchemy import Column,Integer,String,ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy import create_engine
 from passlib.apps import custom_app_context as pwd_context
 import random, string
@@ -23,6 +23,8 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), nullable=False)
+    #items = relationship('Item', cascade='all, delete-orphan')
+    user_id = Column(Integer, ForeignKey('user.id'))
     @property
     def serialize(self):
         """Return object data in easily serializeable format"""
@@ -36,9 +38,10 @@ class Item(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(80), nullable=False)
-    category_id = Column(Integer, ForeignKey('product.id'))
-    category = relationship(Product)
     description = Column(String(250))
+    category_id = Column(Integer, ForeignKey('product.id'))
+    category = relationship(Product, backref=backref("items", cascade="all,delete-orphan"))
+    user_id = Column(Integer, ForeignKey('user.id'))
     @property
     def serialize(self):
         """Return object data in easily serializeable format"""
