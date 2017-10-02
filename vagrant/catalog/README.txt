@@ -22,10 +22,12 @@ localhost:5000
 
 /catalog/new_category
 --add new category to database
+--Notice: name cannot be empty, or ended w/ '.json'
 --login required
 
 /catalog/new_item
 --add new item to database
+--Notice: name cannot be empty, or ended w/ '.json'. category cannot be empty.
 --login required
 
 /catalog/<category_name>/<item_name>
