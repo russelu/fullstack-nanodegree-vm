@@ -1,3 +1,43 @@
+Hi, welcome to my Splatoon2 Fanclub on AWS ubuntu.
+
+IP address:
+54.202.31.60
+
+Software Installed:
+Python, PostgreSQL, Git, apache2, mod_wsgi
+(within Python: psycopg2, flask, flask_sqlalchemy, virtualenv)
+
+Configurations:
+A. SSH is limited on port 2200
+    1 sudo ufw deny 22
+    2 sudo ufw allow 2200
+    3 sudo nano /etc/ssh/sshd_config
+	Change Port from 22 to 2200
+    4 sudo service ssh restart
+B. create su grader
+    1 sudo adduser grader
+    2 add grader to /etc/sudoers.d/
+C. only allow remote connection on ports 2200(ssh), 80(http), 123(ntp)
+    1 sudo ufw allow 2200 
+    2 sudo ufw allow www
+    3 sudo ufw allow 123
+    4 sudo ufw enable
+D. Apache2 & mod_wsgi setup and set DaemonProcess to Python virtual environment
+    1 sudo apt-get install apache2
+    2 sudo apt-get install libapache2-mod-wsgi
+    3 sudo nano /etc/apache2/sites-available/000-default.conf 
+	Change root document path, python-path to venv
+    4 modify myapp.wsgi, to point to python main app.
+E. Set up Python environment and add same libraries to venv using Virtualenv
+    flask, sqlalchemy, requests, passlib, itsdangerous
+F. key-based SSH authentication is enforced
+    1 ssh-keygen
+    2 add public key to /home/grader/.ssh/authorized_keys
+
+
+--------------------------------------------
+--------Copied from Previous project--------
+--------------------------------------------
 Hi, welcome to my catalog app.
 
 Build steps:
