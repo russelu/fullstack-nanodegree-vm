@@ -1,7 +1,10 @@
 Hi, welcome to my Splatoon2 Fanclub on AWS ubuntu.
 
 IP address:
-54.202.31.60
+52.10.115.114 PORT 2200
+
+URL:
+splatoon2fc.com
 
 Software Installed:
 Python, PostgreSQL, Git, apache2, mod_wsgi
