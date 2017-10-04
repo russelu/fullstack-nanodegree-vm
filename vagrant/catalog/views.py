@@ -1,6 +1,7 @@
 from models import Base, User, Product, Item
 from flask import Flask, jsonify, request, render_template
 from flask import url_for, redirect, abort, flash
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine, asc
@@ -13,18 +14,25 @@ from flask import make_response
 import requests
 import random
 import string
+import os
 
 
-engine = create_engine('sqlite:///catalog.db')
+engine = create_engine('postgresql://catalog:123@localhost/splatoon')
 
 Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 app = Flask(__name__)
-
+app.secret_key = 'super_secret_key'
+# app.config.from_object(os.environ['APP_SETTINGS'])
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///splatoon'
+# db = SQLAlchemy(app)
+import models
+APP_PATH = '/workspace/catalog_app/vagrant/catalog/'
 
 CLIENT_ID = json.loads(
-    open('client_secrets.json', 'r').read())['web']['client_id']
+    open(APP_PATH+'client_secrets.json', 'r').read())['web']['client_id']
 
 
 # Create anti-forgery state token
@@ -47,10 +55,10 @@ def fbconnect():
     access_token = request.data
     print "access token received %s " % access_token
 
-    app_id = json.loads(open('fb_client_secrets.json', 'r').read())[
+    app_id = json.loads(open(APP_PATH+'fb_client_secrets.json', 'r').read())[
         'web']['app_id']
     app_secret = json.loads(
-        open('fb_client_secrets.json', 'r').read())['web']['app_secret']
+        open(APP_PATH+'fb_client_secrets.json', 'r').read())['web']['app_secret']
     url_par1 = 'https://graph.facebook.com/oauth/access_token?gra'
     url_par2 = 'nt_type=fb_exchange_token&client_id'
     url_par3 = '=%s&client_secret=%s&fb_exchange_token=%s' % (
@@ -74,7 +82,7 @@ def fbconnect():
     data = json.loads(result)
     login_session['provider'] = 'facebook'
     login_session['username'] = data["name"]
-    login_session['email'] = data["email"]
+    login_session['email'] = data["email"]+'_fb'
     login_session['facebook_id'] = data["id"]
 
     # The token must be stored in the login_session in order to properly logout
@@ -121,7 +129,7 @@ def fbdisconnect():
     url = url_par1+url_par2
     h = httplib2.Http()
     result = h.request(url, 'DELETE')[1]
-    flash("you have been logged out")
+    flash("you have been logged out - fb")
     return redirect('/')
 
 
@@ -138,7 +146,7 @@ def gconnect():
 
     try:
         # Upgrade the authorization code into a credentials object
-        oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
+        oauth_flow = flow_from_clientsecrets(APP_PATH+'client_secrets.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
@@ -197,12 +205,12 @@ def gconnect():
 
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
-    login_session['email'] = data['email']
+    login_session['email'] = data['email']+'_g'
     # ADD PROVIDER TO LOGIN SESSION
     login_session['provider'] = 'google'
 
     # see if user exists, if it doesn't make a new one
-    user_id = getUserID(data["email"])
+    user_id = getUserID(login_session['email'])
     if not user_id:
         user_id = createUser(login_session)
     login_session['user_id'] = user_id
@@ -563,11 +571,7 @@ def categoryJSON(category):
 
 @app.route('/catalog/<category>/<item>.json')
 def itemJSON(category, item):
-    c = session.query(Product).filter_by(name=category).first()
-    if c is None:
-        flash('This category is not valid')
-        return redirect(url_for('showAllProducts'))
-    i = session.query(Item).filter_by(name=item).first()
+    c = session.query(Item).filter_by(name=item).first()
     if i is None or i.category.id != c.id:
         flash('This item is not valid or not under the category you select')
         return redirect(url_for('showAllProducts'))
@@ -575,6 +579,6 @@ def itemJSON(category, item):
 
 
 if __name__ == '__main__':
-    app.secret_key = 'super_secret_key'
-    app.debug = True
-    app.run(host='0.0.0.0', port=5000)
+    app.debug = False
+    # app.run(host='0.0.0.0', port=5000)
+    app.run()

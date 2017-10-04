@@ -1,3 +1,4 @@
+# from views import app, db
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, backref
@@ -48,7 +49,7 @@ class Item(Base):
     name = Column(String(80), nullable=False)
     description = Column(String(250))
     category_id = Column(Integer, ForeignKey('product.id'))
-    category = relationship(Product, backref=backref(
+    category = relationship('Product', backref=backref(
         "items", cascade="all,delete-orphan"))
     user_id = Column(Integer, ForeignKey('user.id'))
 
@@ -61,7 +62,7 @@ class Item(Base):
             'description': self.description
             }
 
-engine = create_engine('sqlite:///catalog.db')
+engine = create_engine('postgresql://catalog:123@localhost/splatoon')
 
 
 Base.metadata.create_all(engine)
