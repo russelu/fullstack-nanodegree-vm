@@ -36,6 +36,10 @@ E. Set up Python environment and add same libraries to venv using Virtualenv
 F. key-based SSH authentication is enforced
     1 ssh-keygen
     2 add public key to /home/grader/.ssh/authorized_keys
+G. git repo:
+    /workspace/catalog_app/
+H. SSH key for grader is stored at
+    /home/grader/.ssh/authorized_keys
 
 
 --------------------------------------------
